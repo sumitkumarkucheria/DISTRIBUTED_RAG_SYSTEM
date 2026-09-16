@@ -8,21 +8,21 @@ Most RAG tutorials assume a single machine and a hosted LLM API. This system is 
 Architecture
 
 
-                     ┌─────────────────────┐
-   documents/  ───▶  │   build_index.py    │  → embeds & chunks docs (BGE-small)
-   (.pdf / .txt)     └─────────────────────┘         → FAISS index + chunk store
-                                │
-                                ▼
-                     ┌──────────────────────┐
-   client query ───▶ │  retrieval_server.py │  FastAPI: /search, /ask, /stream_ask
-                     │  (FAISS + BGE)       │
-                     └─────────┬────────────┘
-                                │  routes to least-busy worker
-                    ┌───────────┼───────────┬───────────┐
-                    ▼           ▼           ▼           ▼
-               worker 1    worker 2    worker 3    worker 4
-               (Ollama,    (Ollama,    (Ollama,    (Ollama,
-                qwen2.5)    qwen2.5)    qwen2.5)    qwen2.5)
+                    
+   documents(.pdf / .txt)/  ───▶    build_index.py     → embeds & chunks docs (BGE-small) →  FAISS index + chunk store
+                                
+                                
+                     
+   client query ───▶ retrieval_server.py <-- FastAPI: /search, /ask, /stream_ask
+                      (FAISS + BGE)       
+                     
+            retrieval_server.py routes to least-busy worker   
+               worker 1 (Ollama, qwen2.5)    
+               worker 2 (Ollama, qwen2.5)    
+               worker 3 (Ollama, qwen2.5)   
+               worker 4 (Ollama, qwen2.5)
+               Add as many workers as you need.
+                   
 
 
 - **Embedding & indexing** (build_index.py) — reads PDFs (pdfplumber) and text files, chunks them (500 chars, 100-char overlap), embeds with BAAI/bge-small-en-v1.5, and builds a FAISS IndexFlatL2 index.
@@ -35,7 +35,7 @@ Architecture
 
 ## Why it doesn't hallucinate outside its documents
 
-The system computes a similarity distance for the best-matching chunk on every query. If that distance exceeds a threshold (THRESHOLD = 1.20), it returns "Information not found in knowledge base" instead of asking the LLM to answer from its own (unverifiable) knowledge. This is a deliberate design choice — the tradeoff is a stricter, more conservative system that will decline answerable-but-borderline questions in exchange for not making things up.
+The system computes a similarity distance for the best-matching chunk on every query. If that distance exceeds a threshold (THRESHOLD = 1.20{You may change according to you document information chunks } ), it returns "Information not found in knowledge base" instead of asking the LLM to answer from its own (unverifiable) knowledge. This is a deliberate design choice — the tradeoff is a stricter, more conservative system that will decline answerable-but-borderline questions in exchange for not making things up.
 
 ## Getting started
 
@@ -49,7 +49,7 @@ python scripts/build_index.py
 #    and make sure Ollama + qwen2.5:1.5b are running on each one
 
 # 3. Start the server
-uvicorn scripts.retrieval_server:app --host 0.0.0.0 --port 8000
+uvicorn scripts.retrieval_server:app --host 0.0.0.0 --port 8000 {Or you can have a secure connection too}
 
 
 Then query it:
